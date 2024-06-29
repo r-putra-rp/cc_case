@@ -36,6 +36,7 @@ ASSETS = [
 ]
 ROLLING_WINDOW = 30
 GRANULARITY = "1h"
+STD_TRESHOLD = 1
 
 WIB = pytz.timezone('Asia/Jakarta')
 DATA_COLLECTION_END = datetime.now().astimezone(WIB)  # Current timestamp

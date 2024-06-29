@@ -137,9 +137,13 @@ class DataCollector:
             )  # Add 7 hour to GMT + 7
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
             df["timestamp"] = df["timestamp"].dt.tz_localize(WIB)
-            df[f"open_{asset_name}"] = df[f"open_{asset_name}"].round(PRECISION)
-            df[f"close_{asset_name}"] = df[f"close_{asset_name}"].round(PRECISION)
-            df[f"volume_{asset_name}"] = df[f"volume_{asset_name}"].round(PRECISION)
+
+            # Filling N/As
+            # Assuming that if yf returns N/A, it means there are no data changes from previous data
+            # Thus backfill
+            df[f"open_{asset_name}"] = df[f"open_{asset_name}"].bfill().round(PRECISION)
+            df[f"close_{asset_name}"] = df[f"close_{asset_name}"].bfill().round(PRECISION)
+            df[f"volume_{asset_name}"] = df[f"volume_{asset_name}"].bfill().round(PRECISION)
 
             logger.debug(f"{asset_name} dataframe head \n{df.head()}")
             logger.debug(f"{asset_name} dataframe tail \n{df.tail()}")
