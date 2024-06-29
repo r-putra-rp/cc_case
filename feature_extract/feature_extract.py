@@ -9,7 +9,8 @@ sys.path.append("..")
 from utils.logger import get_logger
 from utils.config import (
     ASSETS,
-    ROLLING_WINDOW,
+    ROLLING_WINDOW_HR,
+    ROLLING_WINDOW_DAY,
     DATA_FOLDER,
     DATA_FILE,
     PRECISION,
@@ -23,7 +24,7 @@ from utils.config import (
 logger = get_logger()
 
 MARKET_CLOSE_TIME = 16
-ASSETS = ["BBCA.JK"]
+
 
 class FeatureExtract:
     def __init__(self):
@@ -48,9 +49,8 @@ class FeatureExtract:
             df_train, df_test = self.split_train_test(df)
 
             logger.debug(f"Calculating %change daily {asset}")
-            df_train = self.process_daily_pct(df_train)
-            logger.debug(f"{asset} dataframe tail \n{df_train.tail(20)}")
-            exit()
+            df_train = self.process_daily_pct(df_train, asset)
+
             logger.debug(f"Scaling {asset}")
             df_train = self.scale_data(df_train, asset)
 
@@ -62,23 +62,46 @@ class FeatureExtract:
             self.dfs_train[asset] = df_train
             self.dfs_test[asset] = df_test
 
-    @staticmethod
-    def process_daily_pct(
-        df:pd.DataFrame
-    ) -> pd.DataFrame:
-        
-        daily_pct_change = df.groupby("date").apply(
-            lambda x: ((x["close_bbca"].iloc[-1] - x["open_bbca"].iloc[0]) / x["open_bbca"].iloc[0])
-        ).reset_index(name="daily_pct_change")
+    def process_daily_pct(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
+        name = f"daily_pct_change_{asset}"
+        daily_pct_change = (
+            df.groupby("date")
+            .apply(
+                lambda x: (
+                    (x[f"close_{asset}"].iloc[-1] - x[f"open_{asset}"].iloc[0])
+                    / x[f"open_{asset}"].iloc[0]
+                )
+            )
+            .reset_index(name=name)
+        )
 
         df = pd.merge(df, daily_pct_change, on="date")
+        cols = self.cols[asset]
+        cols.append(name)
+        self.cols[asset] = cols
         return df
 
     def process_stdev(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
+
+        daily_pct_change_col = f"scaled_daily_pct_change_{asset}"
+
+        pct_chg = df[["date", daily_pct_change_col]].copy(deep=True).drop_duplicates()
+        pct_chg[f"daily_pct_change_{asset}_stdev"] = (
+            df[daily_pct_change_col]
+            .rolling(window=ROLLING_WINDOW_DAY)
+            .std()
+            .round(PRECISION)
+        )
+
         for col in self.scaled_cols[asset]:
-            df[f"{col}_stdev"] = (
-                df[col].rolling(window=ROLLING_WINDOW).std().round(PRECISION)
-            )
+            if col != daily_pct_change_col:
+                df[f"{col}_stdev"] = (
+                    df[col].rolling(window=ROLLING_WINDOW_HR).std().round(PRECISION)
+                )
+
+        df = pd.merge(df, pct_chg[["date", f"daily_pct_change_{asset}_stdev"]], on="date")
+        
+
         return df
 
     def scale_data(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
@@ -96,6 +119,7 @@ class FeatureExtract:
         self.scaled_cols[asset] = list(new_cols.values())
 
         df = pd.concat([df, scaled_df], axis=1, join="inner")
+        
 
         return df
 
@@ -135,7 +159,6 @@ class FeatureExtract:
             logger.debug(f"{asset_name} dataframe types \n{df.dtypes}")
             logger.debug(f"{asset_name} dataframe info \n{df.info()}")
             logger.debug(f"{asset_name} columns info \n{self.cols[asset_name]}")
-            
 
     def save_to_csv(self):
         for asset, df in self.dfs_train.items():
