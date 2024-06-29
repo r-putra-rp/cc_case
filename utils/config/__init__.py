@@ -46,9 +46,15 @@ DATA_COLLECTION_END_UNIX = int(DATA_COLLECTION_END.timestamp())
 DATA_COLLECTION_START_UNIX = int(DATA_COLLECTION_START.timestamp())
 
 DATA_FOLDER = "../ticker_data"
-DATA_FILE = "_daily_ticker.csv"  # ie bbca_daily_ticker.csv
+DATA_FILE = "_daily_ticker.csv"  # eg bbca_daily_ticker.csv
+
+FEAT_DATA_FOLDER = "../feat_data"
+FEAT_DATA_FILE_TRAIN = "_train.csv"  
+FEAT_DATA_FILE_TEST = "_test.csv"  
+FEAT_SCALER_FILE_TRAIN = "_scaler.pkl"
 
 PRECISION = 6
+TRAIN_TEST_SPLIT = 0.9
 
 
 class ConstantMultipliers:

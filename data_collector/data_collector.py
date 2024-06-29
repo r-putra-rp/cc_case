@@ -50,10 +50,16 @@ class DataCollector:
     def check_data(self):
         # TODO:
         # Check data integrity
-        # Assume OK for now
-        # for asset, df in self.dfs.items():
-        # Do Something
-        pass
+
+        for asset, df in self.dfs.items():
+            # Filling N/As
+            # Assuming that if yf returns N/A, it means there are no data changes from previous data
+            # Thus backfill
+            df[f"open_{asset}"] = df[f"open_{asset}"].bfill().round(PRECISION)
+            df[f"close_{asset}"] = df[f"close_{asset}"].bfill().round(PRECISION)
+            df[f"volume_{asset}"] = df[f"volume_{asset}"].bfill().round(PRECISION)
+
+            self.dfs[asset] = df
 
     def get_yf_data(
         self,
@@ -132,23 +138,15 @@ class DataCollector:
                     f"volume_{asset_name}": volumes,
                 }
             )
-            df["timestamp"] = df["timestamp"] + (
-                SecondsMultipliers.HOUR * 7
-            )  # Add 7 hour to GMT + 7
+            df["timestamp"] = df["timestamp"] + (SecondsMultipliers.HOUR * 7)  # Add 7 hour to GMT + 7
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
             df["timestamp"] = df["timestamp"].dt.tz_localize(WIB)
-
-            # Filling N/As
-            # Assuming that if yf returns N/A, it means there are no data changes from previous data
-            # Thus backfill
-            df[f"open_{asset_name}"] = df[f"open_{asset_name}"].bfill().round(PRECISION)
-            df[f"close_{asset_name}"] = df[f"close_{asset_name}"].bfill().round(PRECISION)
-            df[f"volume_{asset_name}"] = df[f"volume_{asset_name}"].bfill().round(PRECISION)
 
             logger.debug(f"{asset_name} dataframe head \n{df.head()}")
             logger.debug(f"{asset_name} dataframe tail \n{df.tail()}")
             logger.debug(f"{asset_name} dataframe desc \n{df.describe()}")
             logger.debug(f"{asset_name} dataframe types \n{df.dtypes}")
+            logger.debug(f"{asset} dataframe info \n{df.info()}")
 
             self.dfs[asset_name] = df
 
