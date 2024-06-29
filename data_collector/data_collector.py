@@ -1,4 +1,5 @@
 import sys
+sys.path.append("..")
 
 import pandas as pd
 import requests
@@ -17,17 +18,17 @@ from utils.config import (
     WIB,
     DATA_FOLDER,
     DATA_FILE,
-    YAHOO_FINANCE_URL,
-    YAHOO_FINANCE_INTERVAL,
-    CONN_RETRY_QUOTA,
-    TIMEOUT,
+    GRANULARITY,
     PRECISION,
     SecondsMultipliers,
 )
 
-sys.path.append("..")
-
 logger = get_logger()
+
+CONN_RETRY_QUOTA = 5
+TIMEOUT = 2
+
+YAHOO_FINANCE_URL = "https://query2.finance.yahoo.com/v8/finance/chart/"
 
 
 class DataCollector:
@@ -68,7 +69,7 @@ class DataCollector:
             retry = 0
             while retry <= CONN_RETRY_QUOTA:
                 try:
-                    url = f"{YAHOO_FINANCE_URL}{asset}?period1={DATA_COLLECTION_START_UNIX}&period2={DATA_COLLECTION_END_UNIX}&interval={YAHOO_FINANCE_INTERVAL}&includePrePost=False"
+                    url = f"{YAHOO_FINANCE_URL}{asset}?period1={DATA_COLLECTION_START_UNIX}&period2={DATA_COLLECTION_END_UNIX}&interval={GRANULARITY}&includePrePost=False"
                     headers = {
                         "Accept": "*/*",
                         "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -87,6 +88,7 @@ class DataCollector:
                     }
                     logger.debug(f"Connecting to {url}")
                     data = requests.get(url=url, headers=headers, timeout=TIMEOUT)
+                    logger.debug(data.text)
                     data: dict = data.json()
                     break
 

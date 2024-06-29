@@ -1,5 +1,5 @@
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # IDX30 For now
 ASSETS = [
@@ -34,22 +34,21 @@ ASSETS = [
     "UNTR.JK",
     "UNVR.JK",
 ]
+ROLLING_WINDOW = 30
+GRANULARITY = "1h"
 
 WIB = pytz.timezone('Asia/Jakarta')
-DATA_COLLECTION_START = WIB.localize(datetime(2024, 1, 1))
-DATA_COLLECTION_END = datetime.now().astimezone(WIB)
-DATA_COLLECTION_START_UNIX = int(DATA_COLLECTION_START.timestamp())
+DATA_COLLECTION_END = datetime.now().astimezone(WIB)  # Current timestamp
+DATA_COLLECTION_START = DATA_COLLECTION_END - timedelta(days=729)  # Depends on GRANURALITY, if its 1hr, max data from yf is 730 days exclusive
+
 DATA_COLLECTION_END_UNIX = int(DATA_COLLECTION_END.timestamp())
+DATA_COLLECTION_START_UNIX = int(DATA_COLLECTION_START.timestamp())
 
 DATA_FOLDER = "../ticker_data"
 DATA_FILE = "_daily_ticker.csv"  # ie bbca_daily_ticker.csv
 
 PRECISION = 6
-CONN_RETRY_QUOTA = 5
-TIMEOUT = 2
 
-YAHOO_FINANCE_URL = "https://query2.finance.yahoo.com/v8/finance/chart/"
-YAHOO_FINANCE_INTERVAL = "1d"
 
 class ConstantMultipliers:
     NANO = 1_000_000_000
@@ -64,3 +63,12 @@ class SecondsMultipliers:
     WEEK = 604_800
     MONTH = 2_592_000  # Approx 30 days
     YEAR = 31_536_000  # Approx 365 Days
+
+class HoursMultipliers:
+    SECOND = round(1/3_600, PRECISION)
+    MINUTE = round(1/3_600, PRECISION)
+    HOUR = round(float(1), PRECISION)
+    DAY = round(float(24), PRECISION)
+    WEEK = round(float(24 * 7), PRECISION)
+    MONTH = round(float(24 * 30), PRECISION)  # Approx 30 days
+    YEAR = round(float(24 * 365), PRECISION)  # Approx 365 Days
