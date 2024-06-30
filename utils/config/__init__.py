@@ -52,11 +52,14 @@ DATA_FILE = "_daily_ticker.csv"  # eg bbca_daily_ticker.csv
 
 FEAT_DATA_FOLDER = "../feat_data"
 FEAT_DATA_FILE_TRAIN = "_train.csv"  
-FEAT_DATA_FILE_TEST = "_test.csv"  
+FEAT_DATA_FILE_VALIDATION = "_validation.csv"  
 FEAT_SCALER_FILE_TRAIN = "_scaler.pkl"
 
+MODEL_FOLDER = "../model_data"
+MODEL_FILE = "_model.keras"
+
 PRECISION = 6
-TRAIN_TEST_SPLIT = 0.9
+
 
 
 class ConstantMultipliers:

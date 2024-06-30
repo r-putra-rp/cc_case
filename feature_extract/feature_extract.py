@@ -14,23 +14,23 @@ from utils.config import (
     DATA_FOLDER,
     DATA_FILE,
     PRECISION,
-    TRAIN_TEST_SPLIT,
     FEAT_DATA_FOLDER,
     FEAT_DATA_FILE_TRAIN,
-    FEAT_DATA_FILE_TEST,
+    FEAT_DATA_FILE_VALIDATION,
     FEAT_SCALER_FILE_TRAIN,
 )
 
 logger = get_logger()
 
 MARKET_CLOSE_TIME = 16
+VALIDATION_SPLIT = 0.9
 
 
 class FeatureExtract:
     def __init__(self):
         self.dfs: Dict[str, pd.DataFrame] = {}
         self.dfs_train: Dict[str, pd.DataFrame] = {}
-        self.dfs_test: Dict[str, pd.DataFrame] = {}
+        self.dfs_validation: Dict[str, pd.DataFrame] = {}
         self.scalers_train: Dict[str, RobustScaler] = {}
         self.cols: Dict[str, List[str]] = {}
         self.scaled_cols: Dict[str, List[str]] = {}
@@ -46,10 +46,10 @@ class FeatureExtract:
 
             # Splitting train-test
             logger.debug(f"Splitting {asset}")
-            df_train, df_test = self.split_train_test(df)
+            df_train, df_validation = self.split_train_validation(df)
 
-            logger.debug(f"Calculating %change daily {asset}")
-            df_train = self.process_daily_pct(df_train, asset)
+            logger.debug(f"Calculating %change and close daily {asset}")
+            df_train = self.process_daily_data(df_train, asset)
 
             logger.debug(f"Scaling {asset}")
             df_train = self.scale_data(df_train, asset)
@@ -60,10 +60,10 @@ class FeatureExtract:
             logger.debug(f"{asset} dataframe tail \n{df_train.tail()}")
 
             self.dfs_train[asset] = df_train
-            self.dfs_test[asset] = df_test
+            self.dfs_validation[asset] = df_validation
 
-    def process_daily_pct(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
-        name = f"daily_pct_change_{asset}"
+    def process_daily_data(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
+        name_pct = f"daily_pct_change_{asset}"
         daily_pct_change = (
             df.groupby("date")
             .apply(
@@ -72,13 +72,38 @@ class FeatureExtract:
                     / x[f"open_{asset}"].iloc[0]
                 )
             )
-            .reset_index(name=name)
+            .reset_index(name=name_pct)
         )
-
         df = pd.merge(df, daily_pct_change, on="date")
+
+        name_open = f"daily_open_{asset}"
+        daily_open = (
+            df.groupby("date")
+            .apply(
+                lambda x: (
+                    x[f"open_{asset}"].iloc[0] 
+                )
+            )
+            .reset_index(name=name_open)
+        )
+        df = pd.merge(df, daily_open, on="date")
+
+        name_close = f"daily_close_{asset}"
+        daily_close = (
+            df.groupby("date")
+            .apply(
+                lambda x: (
+                    x[f"close_{asset}"].iloc[-1] 
+                )
+            )
+            .reset_index(name=name_close)
+        )
+        df = pd.merge(df, daily_close, on="date")
+
         cols = self.cols[asset]
-        cols.append(name)
+        cols.extend([name_pct, name_close, name_open])
         self.cols[asset] = cols
+
         return df
 
     def process_stdev(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
@@ -124,13 +149,13 @@ class FeatureExtract:
         return df
 
     @staticmethod
-    def split_train_test(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def split_train_validation(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         len_index = len(df.index)
-        train_index = int(len_index * TRAIN_TEST_SPLIT)
+        train_index = int(len_index * VALIDATION_SPLIT)
         df_train = df.iloc[:train_index]
-        df_test = df.iloc[train_index:]
+        df_validation = df.iloc[train_index:]
 
-        return df_train, df_test
+        return df_train, df_validation
 
     @staticmethod
     def process_time(df: pd.DataFrame) -> pd.DataFrame:
@@ -166,8 +191,8 @@ class FeatureExtract:
             logger.debug(f"Saving {asset} to {filename}")
             df.to_csv(filename)
 
-        for asset, df in self.dfs_test.items():
-            filename = f"{FEAT_DATA_FOLDER}/{asset}{FEAT_DATA_FILE_TEST}"
+        for asset, df in self.dfs_validation.items():
+            filename = f"{FEAT_DATA_FOLDER}/{asset}{FEAT_DATA_FILE_VALIDATION}"
             logger.debug(f"Saving {asset} to {filename}")
             df.to_csv(filename)
 
