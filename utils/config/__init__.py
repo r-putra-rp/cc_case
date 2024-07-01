@@ -58,6 +58,10 @@ FEAT_SCALER_FILE_TRAIN = "_scaler.pkl"
 MODEL_FOLDER = "../model_data"
 MODEL_FILE = "_model.keras"
 
+RESULTS_FOLDER = "../results"
+POSITION_HISTORIES = "position_histories.json"
+DECISION_HISTORIES = "decision_histories.json"
+
 PRECISION = 6
 
 

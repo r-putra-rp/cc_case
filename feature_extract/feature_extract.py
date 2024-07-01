@@ -44,12 +44,11 @@ class FeatureExtract:
         for asset, df in self.dfs.items():
             df = self.process_time(df)
 
-            # Splitting train-test
+            logger.debug(f"Calculating %change and close daily {asset}")
+            df = self.process_daily_data(df, asset)
+
             logger.debug(f"Splitting {asset}")
             df_train, df_validation = self.split_train_validation(df)
-
-            logger.debug(f"Calculating %change and close daily {asset}")
-            df_train = self.process_daily_data(df_train, asset)
 
             logger.debug(f"Scaling {asset}")
             df_train = self.scale_data(df_train, asset)
@@ -131,6 +130,7 @@ class FeatureExtract:
 
     def scale_data(self, df: pd.DataFrame, asset: str) -> pd.DataFrame:
         cols = self.cols[asset]
+
         scaler = RobustScaler()
         scaled_df = scaler.fit_transform(df[cols])
 

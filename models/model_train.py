@@ -1,9 +1,7 @@
 import sys
-import joblib
 import pandas as pd
 import numpy as np
 
-from traceback import format_exc
 from typing import Dict
 from sklearn.preprocessing import RobustScaler
 from tensorflow.keras.models import Sequential
@@ -32,7 +30,7 @@ EPOCH = 16
 BATCH_SIZE = 32
 
 
-class ModelTest:
+class ModelTrain:
     def __init__(self) -> None:
         self.dfs_train: Dict[str, pd.DataFrame] = {}
         self.models: Dict[str, Sequential] = {}
@@ -123,5 +121,5 @@ class ModelTest:
 
 
 if __name__ == "__main__":
-    model_test = ModelTest()
-    model_test.main()
+    model_train = ModelTrain()
+    model_train.main()
