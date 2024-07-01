@@ -132,7 +132,7 @@ class ModelTest:
             )
 
             prediction = model.predict(combined_sequence_scaled)[0][0]
-            decision = (prediction > 0.8).astype(int)
+            decision = (prediction > 0.5).astype(int)
             if decision and position_open is None:
                 cnt += 1
                 position_open = {
