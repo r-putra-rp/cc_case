@@ -22,7 +22,7 @@ from utils.config import (
     PRECISION,
     RESULTS_FOLDER,
     POSITION_HISTORIES,
-    DECISION_HISTORIES
+    DECISION_HISTORIES,
 )
 from model_train import (
     SEQUENCE,
@@ -30,12 +30,18 @@ from model_train import (
 
 
 logger = get_logger()
-# ASSETS = ["BUKA.JK"]
+
 ORDER_QTY = 1000
-COLUMN_SCALING = ['open_', 'close_', 'volume_', 'daily_pct_change_', 'daily_close_', 'daily_open_']
+COLUMN_SCALING = [
+    "open_",
+    "close_",
+    "volume_",
+    "daily_pct_change_",
+    "daily_close_",
+    "daily_open_",
+]
 FEATURES = ["scaled_volume_", "scaled_open_", "hours_to_close"]
 FEATURES_ORI = ["volume_", "open_", "hours_to_close"]
-
 
 class ModelTest:
     def __init__(self) -> None:
@@ -55,17 +61,18 @@ class ModelTest:
             df_train = self.dfs_train[asset]
             scaler = self.scalers[asset]
             model = self.models[asset]
-             
 
-            position_history, decision = self.proces_df(asset, df_test, df_train, scaler, model)
+            position_history, decision = self.proces_df(
+                asset, df_test, df_train, scaler, model
+            )
             self.position_histories[asset] = position_history
             self.decisions[asset] = decision
 
-        with open(f"{RESULTS_FOLDER}/{POSITION_HISTORIES}", 'w') as fp:
+        with open(f"{RESULTS_FOLDER}/{POSITION_HISTORIES}", "w") as fp:
             json.dump(self.position_histories, fp)
 
         logger.debug(self.decisions)
-        with open(f"{RESULTS_FOLDER}/{DECISION_HISTORIES}", 'w') as fp:
+        with open(f"{RESULTS_FOLDER}/{DECISION_HISTORIES}", "w") as fp:
             json.dump(self.decisions, fp)
 
     @staticmethod
@@ -74,11 +81,13 @@ class ModelTest:
         df_test: pd.DataFrame,
         df_train: pd.DataFrame,
         scaler: RobustScaler,
-        model: Sequential
+        model: Sequential,
     ) -> Tuple[List[dict], List[int]]:
-        
+
         features = [f"{x}{asset}" if x != "hours_to_close" else x for x in FEATURES]
-        features_ori =  [f"{x}{asset}" if x != "hours_to_close" else x for x in FEATURES_ORI]
+        features_ori = [
+            f"{x}{asset}" if x != "hours_to_close" else x for x in FEATURES_ORI
+        ]
         position_open: dict = None
         position_hist: List[dict] = []
         decision_hist: List[int] = []
@@ -91,13 +100,15 @@ class ModelTest:
         cnt = 0
         pred = 0
         for idx, row_ori in df_test.iterrows():
-            
+
             logger.debug(f" === Processing {asset} index {idx} === ")
             if position_open is not None:
                 if row_ori["hours_to_close"] == 1:
                     open_price = position_open["open_price"]
                     qty = position_open["qty"]
-                    close_price =  row_ori[f"close_{asset}"]
+                    close_price = row_ori[f"close_{asset}"]
+                    close_ts = row_ori["timestamp"]
+
                     pnl = (close_price - open_price) / open_price
                     pnl = round(pnl * qty, PRECISION)
                     position_hist.append(
@@ -105,7 +116,8 @@ class ModelTest:
                             "open_price": open_price,
                             "qty": qty,
                             "close_price": close_price,
-                            "pnl": pnl
+                            "pnl": pnl,
+                            "close_ts": close_ts.isoformat()
                         }
                     )
                     position_open = None
@@ -115,18 +127,20 @@ class ModelTest:
             test_row = scaler.transform(test_row)
 
             combined_sequence_scaled = np.vstack((train_sequence, test_row))
-            combined_sequence_scaled = combined_sequence_scaled[-SEQUENCE:].reshape((1, SEQUENCE, len(features_ori)))
+            combined_sequence_scaled = combined_sequence_scaled[-SEQUENCE:].reshape(
+                (1, SEQUENCE, len(features_ori))
+            )
 
             prediction = model.predict(combined_sequence_scaled)[0][0]
             decision = (prediction > 0.8).astype(int)
             if decision and position_open is None:
                 cnt += 1
                 position_open = {
-                        "open_price": row_ori[f"close_{asset}"],
-                        "qty": ORDER_QTY,
-                        "close_price": None,
-                        "pnl": None
-                    }
+                    "open_price": row_ori[f"close_{asset}"],
+                    "qty": ORDER_QTY,
+                    "close_price": None,
+                    "pnl": None,
+                }
 
             pred += 1
             logger.debug(f"Prediction {prediction}")
@@ -151,7 +165,7 @@ class ModelTest:
             df = pd.read_csv(filename, index_col=0)
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             self.dfs_train[asset] = df
-                
+
             filename = f"{FEAT_DATA_FOLDER}/{asset}{FEAT_DATA_FILE_VALIDATION}"
             logger.debug(f"Reading {asset} filename {filename}")
             df = pd.read_csv(filename, index_col=0)
@@ -167,7 +181,6 @@ class ModelTest:
             logger.debug(f"Reading {asset} filename {filename}")
             model = load_model(filename)
             self.models[asset] = model
-
 
 
 if __name__ == "__main__":

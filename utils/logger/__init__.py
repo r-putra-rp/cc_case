@@ -1,7 +1,6 @@
 import logging
 
 class CustomLogger(logging.Formatter):
-
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
     green = "\033[92m"
@@ -27,11 +26,11 @@ def get_logger() -> logging.Logger:
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    ch.setFormatter(CustomLogger())
-
-    logger.addHandler(ch)
+    # Check if the handler already exists
+    if not logger.handlers:
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(CustomLogger())
+        logger.addHandler(ch)
 
     return logger
